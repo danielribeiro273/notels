@@ -1,0 +1,1796 @@
+<!DOCTYPE html>
+<html lang="pt-br" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>nōte.ls — workspace minimalista e produtivo</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            mono: {
+              50: '#f9f9f9',
+              100: '#ececec',
+              200: '#e1e1e1',
+              300: '#cccccc',
+              400: '#999999',
+              500: '#666666',
+              600: '#444444',
+              700: '#282828',
+              800: '#1d1d1d',
+              900: '#141414',
+              950: '#0a0a0a'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+            mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace']
+          }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    /* Rule: Forced Lowercase Aesthetic across all visual elements */
+    * {
+      text-transform: lowercase !important;
+      letter-spacing: -0.015em;
+    }
+
+    /* Minimal Scrollbar Styling */
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #282828;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #444444;
+    }
+
+    /* Contenteditable Placeholder Injection */
+    [contenteditable]:empty:before {
+      content: attr(data-placeholder);
+      color: #555555;
+      cursor: text;
+      pointer-events: none;
+      display: inline-block;
+    }
+
+    [contenteditable]:focus {
+      outline: none;
+    }
+
+    .drag-ghost {
+      opacity: 0.3;
+      border: 1px dashed #666666 !important;
+    }
+
+    .drag-over-item {
+      border-top: 2px solid #999999 !important;
+    }
+
+    /* Text highlight spans */
+    .hl-yellow { background-color: rgba(234, 179, 8, 0.18); color: #f3f3f3; padding: 0 4px; border-radius: 2px; }
+    .hl-blue { background-color: rgba(59, 130, 246, 0.18); color: #f3f3f3; padding: 0 4px; border-radius: 2px; }
+    .hl-green { background-color: rgba(34, 197, 94, 0.18); color: #f3f3f3; padding: 0 4px; border-radius: 2px; }
+    .hl-red { background-color: rgba(239, 68, 68, 0.18); color: #f3f3f3; padding: 0 4px; border-radius: 2px; }
+
+    code.inline-code {
+      background-color: #1a1a1a;
+      border: 1px solid #2d2d2d;
+      color: #cccccc;
+      padding: 1px 5px;
+      border-radius: 3px;
+      font-family: ui-monospace, monospace;
+      font-size: 0.88em;
+    }
+  </style>
+</head>
+
+<body class="bg-mono-950 text-mono-300 font-sans antialiased h-screen flex overflow-hidden select-none">
+
+  <!-- SIDEBAR NAVIGATION -->
+  <aside id="sidebar" class="w-64 bg-mono-900 border-r border-mono-800 flex flex-col justify-between transition-all duration-300 z-30 shrink-0">
+    <div class="flex flex-col h-full overflow-hidden">
+      
+      <!-- Workspace Brand Header -->
+      <div class="p-3 border-b border-mono-800 flex items-center justify-between">
+        <div class="flex items-center space-x-2">
+          <div class="w-5 h-5 bg-mono-200 text-mono-950 rounded flex items-center justify-center font-bold text-xs font-mono">
+            n
+          </div>
+          <span class="font-semibold text-xs tracking-tight text-mono-100 font-mono">nōte.ls</span>
+        </div>
+        <div class="flex items-center space-x-1">
+          <button onclick="undo()" title="desfazer (ctrl+z)" class="p-1 hover:bg-mono-800 rounded text-mono-400 hover:text-mono-200 transition-colors">
+            <i data-lucide="undo-2" class="w-3.5 h-3.5"></i>
+          </button>
+          <button onclick="redo()" title="refazer (ctrl+y)" class="p-1 hover:bg-mono-800 rounded text-mono-400 hover:text-mono-200 transition-colors">
+            <i data-lucide="redo-2" class="w-3.5 h-3.5"></i>
+          </button>
+          <button onclick="openHelpModal()" title="atalhos & ajuda (?)" class="p-1 hover:bg-mono-800 rounded text-mono-400 hover:text-mono-200 transition-colors">
+            <i data-lucide="help-circle" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="p-2 space-y-0.5 border-b border-mono-800">
+        <div class="px-2 py-1 text-[10px] font-mono text-mono-500 tracking-wider">visualizações</div>
+        
+        <button id="nav-list" onclick="switchView('list')" class="w-full flex items-center space-x-2 px-2 py-1.5 rounded text-xs transition-colors hover:bg-mono-800 text-mono-200 bg-mono-800">
+          <i data-lucide="list-todo" class="w-3.5 h-3.5 text-mono-400"></i>
+          <span>editor de blocos</span>
+        </button>
+
+        <button id="nav-board" onclick="switchView('board')" class="w-full flex items-center space-x-2 px-2 py-1.5 rounded text-xs transition-colors hover:bg-mono-800 text-mono-400 hover:text-mono-200">
+          <i data-lucide="kanban" class="w-3.5 h-3.5 text-mono-400"></i>
+          <span>quadro kanban</span>
+        </button>
+
+        <button id="nav-eisenhower" onclick="switchView('eisenhower')" class="w-full flex items-center space-x-2 px-2 py-1.5 rounded text-xs transition-colors hover:bg-mono-800 text-mono-400 hover:text-mono-200">
+          <i data-lucide="grid" class="w-3.5 h-3.5 text-mono-400"></i>
+          <span>matriz eisenhower</span>
+        </button>
+
+        <button id="nav-gantt" onclick="switchView('gantt')" class="w-full flex items-center space-x-2 px-2 py-1.5 rounded text-xs transition-colors hover:bg-mono-800 text-mono-400 hover:text-mono-200">
+          <i data-lucide="git-commit" class="w-3.5 h-3.5 text-mono-400"></i>
+          <span>linha do tempo gantt</span>
+        </button>
+
+        <button id="nav-calendar" onclick="switchView('calendar')" class="w-full flex items-center space-x-2 px-2 py-1.5 rounded text-xs transition-colors hover:bg-mono-800 text-mono-400 hover:text-mono-200">
+          <i data-lucide="calendar" class="w-3.5 h-3.5 text-mono-400"></i>
+          <span>calendário simples</span>
+        </button>
+
+        <button id="nav-analytics" onclick="switchView('analytics')" class="w-full flex items-center space-x-2 px-2 py-1.5 rounded text-xs transition-colors hover:bg-mono-800 text-mono-400 hover:text-mono-200">
+          <i data-lucide="bar-chart-3" class="w-3.5 h-3.5 text-mono-400"></i>
+          <span>estatísticas & canvas</span>
+        </button>
+      </div>
+
+      <div class="p-2 flex-1 overflow-y-auto">
+        <div class="flex items-center justify-between px-2 py-1">
+          <span class="text-[10px] font-mono text-mono-500 tracking-wider">páginas / cadernos</span>
+          <button onclick="createNewProject()" class="text-mono-500 hover:text-mono-200 transition-colors p-0.5 rounded hover:bg-mono-800" title="nova página">
+            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+        <div id="projectList" class="space-y-0.5 mt-1">
+          <!-- Dynamically populated page items -->
+        </div>
+      </div>
+
+      <div class="p-2 border-t border-mono-800 space-y-1">
+        <button onclick="openTemplatesModal()" class="w-full flex items-center space-x-2 px-2 py-1 rounded text-xs hover:bg-mono-800 text-mono-400 hover:text-mono-200 transition-colors">
+          <i data-lucide="layout-template" class="w-3.5 h-3.5"></i>
+          <span>modelos & templates</span>
+        </button>
+
+        <button onclick="openAutomationModal()" class="w-full flex items-center space-x-2 px-2 py-1 rounded text-xs hover:bg-mono-800 text-mono-400 hover:text-mono-200 transition-colors">
+          <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+          <span>regras & automações</span>
+        </button>
+
+        <button onclick="openTagsManager()" class="w-full flex items-center space-x-2 px-2 py-1 rounded text-xs hover:bg-mono-800 text-mono-400 hover:text-mono-200 transition-colors">
+          <i data-lucide="tag" class="w-3.5 h-3.5"></i>
+          <span>gerenciar etiquetas</span>
+        </button>
+
+        <button onclick="openSnapshotsModal()" class="w-full flex items-center space-x-2 px-2 py-1 rounded text-xs hover:bg-mono-800 text-mono-400 hover:text-mono-200 transition-colors">
+          <i data-lucide="history" class="w-3.5 h-3.5"></i>
+          <span>versões & snapshots</span>
+        </button>
+
+        <button onclick="openDataModal()" class="w-full flex items-center space-x-2 px-2 py-1 rounded text-xs hover:bg-mono-800 text-mono-400 hover:text-mono-200 transition-colors">
+          <i data-lucide="database" class="w-3.5 h-3.5"></i>
+          <span>backup json, md & csv</span>
+        </button>
+
+        <div class="pt-2 flex items-center justify-between px-2 text-[10px] text-mono-500 font-mono">
+          <span id="statsSummary">0/0 concluidos</span>
+          <button onclick="clearCompletedBlocks()" class="hover:text-mono-300 underline">limpar concluidos</button>
+        </div>
+      </div>
+
+    </div>
+  </aside>
+
+  <!-- MAIN CONTAINER AREA -->
+  <main class="flex-1 flex flex-col h-full overflow-hidden bg-mono-950 relative">
+    
+    <header class="h-11 border-b border-mono-800 flex items-center justify-between px-4 bg-mono-950 z-10 shrink-0">
+      <div class="flex items-center space-x-3">
+        <button id="toggleSidebarBtn" onclick="toggleSidebar()" class="text-mono-500 hover:text-mono-200 transition-colors p-1 rounded hover:bg-mono-900">
+          <i data-lucide="panel-left" class="w-4 h-4"></i>
+        </button>
+        <span class="text-mono-800">/</span>
+        <span id="currentWorkspaceBreadcrumb" class="text-xs text-mono-400 font-mono">minhas tarefas</span>
+      </div>
+
+      <!-- Integrated Pomodoro & Web Audio Sound Machine Bar -->
+      <div id="pomodoroBar" class="hidden md:flex items-center space-x-2 bg-mono-900 px-3 py-1 rounded-full border border-mono-800 font-mono text-xs">
+        <span id="pomodoroTimerDisplay" class="text-mono-200 font-semibold">25:00</span>
+        <button onclick="togglePomodoroTimer()" id="pomoPlayBtn" class="p-1 hover:bg-mono-800 rounded text-mono-400 hover:text-mono-200">
+          <i data-lucide="play" class="w-3 h-3"></i>
+        </button>
+        <button onclick="resetPomodoroTimer()" class="p-1 hover:bg-mono-800 rounded text-mono-400 hover:text-mono-200">
+          <i data-lucide="rotate-ccw" class="w-3 h-3"></i>
+        </button>
+        <div class="w-px h-3 bg-mono-800 mx-1"></div>
+        <i data-lucide="headphones" class="w-3 h-3 text-mono-500"></i>
+        <select id="audioNoiseSelect" onchange="changeAmbientAudio(this.value)" class="bg-transparent text-[11px] text-mono-400 outline-none cursor-pointer">
+          <option value="none">som: desligado</option>
+          <option value="white">ruído branco</option>
+          <option value="rain">chuva sintética</option>
+          <option value="binaural">ondas binaurais</option>
+        </select>
+      </div>
+
+      <!-- Quick Search and Filter Controls -->
+      <div class="flex items-center space-x-2">
+        <div class="relative">
+          <i data-lucide="search" class="w-3.5 h-3.5 absolute left-2 top-2 text-mono-500"></i>
+          <input type="text" id="searchInput" oninput="handleSearch(this.value)" placeholder="buscar bloco..." class="pl-7 pr-2 py-1 bg-mono-900 text-xs rounded border border-mono-800 focus:outline-none focus:border-mono-600 text-mono-200 w-36 focus:w-48 transition-all font-mono placeholder-mono-600" />
+        </div>
+
+        <select id="priorityFilter" onchange="handleFilterChange()" class="bg-mono-900 border border-mono-800 text-xs rounded px-2 py-1 text-mono-400 focus:outline-none focus:border-mono-600 font-mono">
+          <option value="ALL">todas prioridades</option>
+          <option value="HIGH">alta prioridade</option>
+          <option value="MEDIUM">média prioridade</option>
+          <option value="LOW">baixa prioridade</option>
+        </select>
+      </div>
+    </header>
+
+    <!-- FLOATING TEXT FORMATTING TOOLBAR -->
+    <div id="floatingFormatMenu" class="fixed hidden bg-mono-900 border border-mono-700 rounded shadow-2xl flex items-center space-x-0.5 p-1 z-50">
+      <button onclick="formatSelection('bold')" class="p-1 hover:bg-mono-800 rounded text-mono-300 font-bold text-xs px-2" title="negrito">b</button>
+      <button onclick="formatSelection('italic')" class="p-1 hover:bg-mono-800 rounded text-mono-300 italic text-xs px-2" title="itálico">i</button>
+      <button onclick="formatSelection('strikeThrough')" class="p-1 hover:bg-mono-800 rounded text-mono-300 line-through text-xs px-2" title="tachado">s</button>
+      <div class="w-px h-4 bg-mono-800 my-auto mx-1"></div>
+      <button onclick="applyHighlight('hl-yellow')" class="p-1 hover:bg-mono-800 rounded text-mono-400 text-xs px-1.5">amarelo</button>
+      <button onclick="applyHighlight('hl-blue')" class="p-1 hover:bg-mono-800 rounded text-mono-400 text-xs px-1.5">azul</button>
+      <button onclick="applyHighlight('hl-green')" class="p-1 hover:bg-mono-800 rounded text-mono-400 text-xs px-1.5">verde</button>
+      <button onclick="applyHighlight('hl-red')" class="p-1 hover:bg-mono-800 rounded text-mono-400 text-xs px-1.5">vermelho</button>
+      <div class="w-px h-4 bg-mono-800 my-auto mx-1"></div>
+      <button onclick="wrapInlineCode()" class="p-1 hover:bg-mono-800 rounded text-mono-400 font-mono text-xs px-1.5" title="código inline">&lt;/&gt;</button>
+    </div>
+
+    <!-- FLOATING SLASH COMMAND MENU -->
+    <div id="slashMenu" class="fixed hidden bg-mono-900 border border-mono-800 rounded-lg shadow-2xl p-1 z-50 w-52 font-mono text-xs space-y-0.5">
+      <div class="px-2 py-1 text-[10px] text-mono-500 uppercase tracking-wider border-b border-mono-800/60 mb-1">comandos de bloco</div>
+      <button onclick="executeSlashCommand('todo')" class="w-full text-left px-2 py-1.5 rounded hover:bg-mono-800 text-mono-300 flex items-center space-x-2">
+        <i data-lucide="check-square" class="w-3.5 h-3.5 text-mono-400"></i>
+        <span>/todo — checklist</span>
+      </button>
+      <button onclick="executeSlashCommand('h1')" class="w-full text-left px-2 py-1.5 rounded hover:bg-mono-800 text-mono-300 flex items-center space-x-2">
+        <i data-lucide="heading-1" class="w-3.5 h-3.5 text-mono-400"></i>
+        <span>/h1 — título principal</span>
+      </button>
+      <button onclick="executeSlashCommand('h2')" class="w-full text-left px-2 py-1.5 rounded hover:bg-mono-800 text-mono-300 flex items-center space-x-2">
+        <i data-lucide="heading-2" class="w-3.5 h-3.5 text-mono-400"></i>
+        <span>/h2 — subtítulo</span>
+      </button>
+      <button onclick="executeSlashCommand('quote')" class="w-full text-left px-2 py-1.5 rounded hover:bg-mono-800 text-mono-300 flex items-center space-x-2">
+        <i data-lucide="quote" class="w-3.5 h-3.5 text-mono-400"></i>
+        <span>/quote — citação</span>
+      </button>
+      <button onclick="executeSlashCommand('callout')" class="w-full text-left px-2 py-1.5 rounded hover:bg-mono-800 text-mono-300 flex items-center space-x-2">
+        <i data-lucide="lightbulb" class="w-3.5 h-3.5 text-mono-400"></i>
+        <span>/callout — destaque</span>
+      </button>
+      <button onclick="executeSlashCommand('divider')" class="w-full text-left px-2 py-1.5 rounded hover:bg-mono-800 text-mono-300 flex items-center space-x-2">
+        <i data-lucide="minus" class="w-3.5 h-3.5 text-mono-400"></i>
+        <span>/divider — divisor</span>
+      </button>
+    </div>
+
+    <div class="flex-1 overflow-y-auto p-6 md:p-12 max-w-5xl w-full mx-auto" id="mainContainer">
+      
+      <!-- WORKSPACE PAGE HEADER -->
+      <div id="pageHeader" class="mb-8 space-y-3">
+        <div class="flex items-center space-x-3">
+          <span id="pageIcon" onclick="cyclePageIcon()" class="text-3xl cursor-pointer hover:opacity-80 transition-opacity p-1 rounded hover:bg-mono-900" title="clique para mudar ícone">📝</span>
+          <input type="text" id="pageTitleInput" value="minhas tarefas" onchange="updateProjectTitle(this.value)" class="text-3xl font-bold bg-transparent outline-none border-none text-mono-100 w-full placeholder-mono-700 tracking-tight" placeholder="título da página..." />
+        </div>
+        
+        <!-- Minimal Progress Bar -->
+        <div class="space-y-1">
+          <div class="flex justify-between items-center text-[10px] font-mono text-mono-500">
+            <span id="progressBarLabel">progresso do caderno</span>
+            <span id="progressBarPercent">0%</span>
+          </div>
+          <div class="w-full bg-mono-900 h-1 rounded-full overflow-hidden border border-mono-800/40">
+            <div id="workspaceProgressBar" class="bg-mono-300 h-full w-0 transition-all duration-300"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW 1: BLOCK LIST EDITOR -->
+      <div id="listView" class="space-y-1 min-h-[450px]">
+        <!-- Dynamic Blocks Rendered via JavaScript -->
+      </div>
+
+      <!-- VIEW 2: KANBAN BOARD -->
+      <div id="boardView" class="hidden grid grid-cols-1 md:grid-cols-3 gap-4 h-full">
+        <!-- Kanban Column: To Do -->
+        <div class="bg-mono-900/40 p-3 rounded-lg border border-mono-800 flex flex-col h-full min-h-[380px]">
+          <div class="flex items-center justify-between mb-3 text-xs font-mono text-mono-400 pb-2 border-b border-mono-800">
+            <span class="flex items-center space-x-1.5">
+              <span class="w-2 h-2 rounded-full bg-mono-600"></span>
+              <span>a fazer</span>
+            </span>
+            <span id="count-TODO" class="text-mono-600 font-mono">0</span>
+          </div>
+          <div id="kanban-TODO" class="space-y-2 flex-1 overflow-y-auto" ondragover="allowDrop(event)" ondrop="dropKanban(event, 'TODO')"></div>
+        </div>
+
+        <!-- Kanban Column: In Progress -->
+        <div class="bg-mono-900/40 p-3 rounded-lg border border-mono-800 flex flex-col h-full min-h-[380px]">
+          <div class="flex items-center justify-between mb-3 text-xs font-mono text-mono-400 pb-2 border-b border-mono-800">
+            <span class="flex items-center space-x-1.5">
+              <span class="w-2 h-2 rounded-full bg-mono-400"></span>
+              <span>em progresso</span>
+            </span>
+            <span id="count-IN_PROGRESS" class="text-mono-600 font-mono">0</span>
+          </div>
+          <div id="kanban-IN_PROGRESS" class="space-y-2 flex-1 overflow-y-auto" ondragover="allowDrop(event)" ondrop="dropKanban(event, 'IN_PROGRESS')"></div>
+        </div>
+
+        <!-- Kanban Column: Completed -->
+        <div class="bg-mono-900/40 p-3 rounded-lg border border-mono-800 flex flex-col h-full min-h-[380px]">
+          <div class="flex items-center justify-between mb-3 text-xs font-mono text-mono-400 pb-2 border-b border-mono-800">
+            <span class="flex items-center space-x-1.5">
+              <span class="w-2 h-2 rounded-full bg-mono-200"></span>
+              <span>concluído</span>
+            </span>
+            <span id="count-DONE" class="text-mono-600 font-mono">0</span>
+          </div>
+          <div id="kanban-DONE" class="space-y-2 flex-1 overflow-y-auto" ondragover="allowDrop(event)" ondrop="dropKanban(event, 'DONE')"></div>
+        </div>
+      </div>
+
+      <div id="eisenhowerView" class="hidden grid grid-cols-1 md:grid-cols-2 gap-4 h-full font-mono">
+        <div class="bg-mono-900/50 p-4 rounded-lg border border-mono-800 flex flex-col h-64" ondragover="allowDrop(event)" ondrop="dropEisenhower(event, 'URGENT_IMPORTANT')">
+          <div class="text-xs text-mono-200 font-semibold mb-2 flex justify-between border-b border-mono-800 pb-1">
+            <span>🔥 urgente & importante</span>
+            <span class="text-mono-500 text-[10px]">fazer agora</span>
+          </div>
+          <div id="eisenhower-URGENT_IMPORTANT" class="space-y-2 overflow-y-auto flex-1"></div>
+        </div>
+
+        <div class="bg-mono-900/50 p-4 rounded-lg border border-mono-800 flex flex-col h-64" ondragover="allowDrop(event)" ondrop="dropEisenhower(event, 'NOT_URGENT_IMPORTANT')">
+          <div class="text-xs text-mono-200 font-semibold mb-2 flex justify-between border-b border-mono-800 pb-1">
+            <span>📅 não urgente, mas importante</span>
+            <span class="text-mono-500 text-[10px]">agendar</span>
+          </div>
+          <div id="eisenhower-NOT_URGENT_IMPORTANT" class="space-y-2 overflow-y-auto flex-1"></div>
+        </div>
+
+        <div class="bg-mono-900/50 p-4 rounded-lg border border-mono-800 flex flex-col h-64" ondragover="allowDrop(event)" ondrop="dropEisenhower(event, 'URGENT_NOT_IMPORTANT')">
+          <div class="text-xs text-mono-200 font-semibold mb-2 flex justify-between border-b border-mono-800 pb-1">
+            <span>⚡ urgente, mas não importante</span>
+            <span class="text-mono-500 text-[10px]">delegar/rapido</span>
+          </div>
+          <div id="eisenhower-URGENT_NOT_IMPORTANT" class="space-y-2 overflow-y-auto flex-1"></div>
+        </div>
+
+        <div class="bg-mono-900/50 p-4 rounded-lg border border-mono-800 flex flex-col h-64" ondragover="allowDrop(event)" ondrop="dropEisenhower(event, 'NOT_URGENT_NOT_IMPORTANT')">
+          <div class="text-xs text-mono-200 font-semibold mb-2 flex justify-between border-b border-mono-800 pb-1">
+            <span>☕ não urgente & não importante</span>
+            <span class="text-mono-500 text-[10px]">eliminar</span>
+          </div>
+          <div id="eisenhower-NOT_URGENT_NOT_IMPORTANT" class="space-y-2 overflow-y-auto flex-1"></div>
+        </div>
+      </div>
+
+      <div id="ganttView" class="hidden space-y-4 font-mono text-xs">
+        <div class="border-b border-mono-800 pb-2 text-mono-400">linha do tempo cronológica de entregas</div>
+        <div id="ganttContainer" class="space-y-2 bg-mono-900 p-4 rounded-lg border border-mono-800">
+          <!-- Dynamic Gantt chart rows populated via JS -->
+        </div>
+      </div>
+
+      <div id="calendarView" class="hidden space-y-4">
+        <div class="flex items-center justify-between border-b border-mono-800 pb-3">
+          <span class="text-xs font-mono text-mono-400" id="calendarMonthLabel">visão por datas de entrega</span>
+          <div class="text-xs text-mono-500 font-mono">tarefas com data definida</div>
+        </div>
+        <div id="calendarGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+          <!-- Calendar Items Populated Dynamically -->
+        </div>
+      </div>
+
+      <div id="analyticsView" class="hidden space-y-6 font-mono text-xs">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="bg-mono-900 p-4 rounded border border-mono-800 space-y-1">
+            <span class="text-mono-500 text-[10px]">taxa de conclusão</span>
+            <div id="statCompletionRate" class="text-xl text-mono-100 font-bold">0%</div>
+          </div>
+          <div class="bg-mono-900 p-4 rounded border border-mono-800 space-y-1">
+            <span class="text-mono-500 text-[10px]">tempo total estimado</span>
+            <div id="statTotalEstimated" class="text-xl text-mono-100 font-bold">0 hrs</div>
+          </div>
+          <div class="bg-mono-900 p-4 rounded border border-mono-800 space-y-1">
+            <span class="text-mono-500 text-[10px]">regras de automação ativas</span>
+            <div id="statActiveRules" class="text-xl text-mono-100 font-bold">0</div>
+          </div>
+        </div>
+
+        <div class="bg-mono-900 p-4 rounded border border-mono-800 space-y-3">
+          <span class="text-mono-400">distribuição de tarefas por prioridade</span>
+          <div class="h-48 w-full">
+            <canvas id="analyticsCanvas" class="w-full h-full"></canvas>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- MODAL 1: BLOCK PROPERTIES EDIT -->
+  <div id="blockModal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 p-4">
+    <div class="bg-mono-900 border border-mono-800 rounded-lg w-full max-w-md p-5 shadow-2xl space-y-4">
+      <div class="flex justify-between items-center border-b border-mono-800 pb-2">
+        <span class="text-xs font-mono text-mono-300">propriedades do bloco</span>
+        <button onclick="closeModal('blockModal')" class="text-mono-500 hover:text-mono-300 transition-colors">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block text-mono-500 font-mono mb-1">tipo do bloco</label>
+          <select id="modalType" class="w-full bg-mono-950 border border-mono-800 p-1.5 rounded text-mono-200 outline-none font-mono">
+            <option value="todo">tarefa checklist</option>
+            <option value="h1">cabeçalho h1</option>
+            <option value="h2">subtítulo h2</option>
+            <option value="quote">citação (/quote)</option>
+            <option value="callout">caixa de destaque (/callout)</option>
+            <option value="divider">divisor horizontal</option>
+          </select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-mono-500 font-mono mb-1">prioridade</label>
+            <select id="modalPriority" class="w-full bg-mono-950 border border-mono-800 p-1.5 rounded text-mono-200 outline-none font-mono">
+              <option value="LOW">baixa prioridade</option>
+              <option value="MEDIUM">média prioridade</option>
+              <option value="HIGH">alta prioridade</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-mono-500 font-mono mb-1">status kanban</label>
+            <select id="modalStatus" class="w-full bg-mono-950 border border-mono-800 p-1.5 rounded text-mono-200 outline-none font-mono">
+              <option value="TODO">a fazer</option>
+              <option value="IN_PROGRESS">em progresso</option>
+              <option value="DONE">concluído</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-mono-500 font-mono mb-1">matriz de eisenhower</label>
+          <select id="modalEisenhower" class="w-full bg-mono-950 border border-mono-800 p-1.5 rounded text-mono-200 outline-none font-mono">
+            <option value="NOT_URGENT_IMPORTANT">não urgente / importante</option>
+            <option value="URGENT_IMPORTANT">urgente & importante</option>
+            <option value="URGENT_NOT_IMPORTANT">urgente / não importante</option>
+            <option value="NOT_URGENT_NOT_IMPORTANT">não urgente / não importante</option>
+          </select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-mono-500 font-mono mb-1">data de entrega</label>
+            <input type="date" id="modalDueDate" class="w-full bg-mono-950 border border-mono-800 p-1.5 rounded text-mono-200 outline-none font-mono" />
+          </div>
+          <div>
+            <label class="block text-mono-500 font-mono mb-1">estimativa (horas)</label>
+            <input type="number" id="modalEstimateHours" min="0" step="0.5" placeholder="ex: 1.5" class="w-full bg-mono-950 border border-mono-800 p-1.5 rounded text-mono-200 outline-none font-mono" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-mono-500 font-mono mb-1">atribuir etiqueta</label>
+          <select id="modalTag" class="w-full bg-mono-950 border border-mono-800 p-1.5 rounded text-mono-200 outline-none font-mono">
+            <option value="">nenhuma</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="flex justify-end space-x-2 pt-2 border-t border-mono-800">
+        <button onclick="closeModal('blockModal')" class="px-3 py-1 rounded text-xs border border-mono-800 text-mono-400 hover:bg-mono-800 transition-colors">cancelar</button>
+        <button onclick="saveBlockModal()" class="px-3 py-1 rounded text-xs bg-mono-200 text-mono-950 font-medium hover:bg-mono-100 transition-colors">salvar alterações</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 2: TAGS MANAGER -->
+  <div id="tagsModal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 p-4">
+    <div class="bg-mono-900 border border-mono-800 rounded-lg w-full max-w-sm p-5 shadow-2xl space-y-4">
+      <div class="flex justify-between items-center border-b border-mono-800 pb-2">
+        <span class="text-xs font-mono text-mono-300">gerenciar etiquetas</span>
+        <button onclick="closeModal('tagsModal')" class="text-mono-500 hover:text-mono-300 transition-colors">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="flex space-x-2">
+        <input type="text" id="newTagName" placeholder="nome da etiqueta..." class="flex-1 bg-mono-950 border border-mono-800 p-1.5 rounded text-xs text-mono-200 outline-none font-mono" />
+        <button onclick="addTag()" class="px-3 py-1.5 bg-mono-800 text-mono-200 rounded text-xs hover:bg-mono-700 transition-colors">adicionar</button>
+      </div>
+
+      <div id="tagsList" class="space-y-1.5 max-h-48 overflow-y-auto text-xs font-mono">
+        <!-- Rendered Tags List -->
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 3: AUTOMATION RULES ENGINE -->
+  <div id="automationModal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 p-4">
+    <div class="bg-mono-900 border border-mono-800 rounded-lg w-full max-w-md p-5 shadow-2xl space-y-4">
+      <div class="flex justify-between items-center border-b border-mono-800 pb-2">
+        <span class="text-xs font-mono text-mono-300">regras de automação local</span>
+        <button onclick="closeModal('automationModal')" class="text-mono-500 hover:text-mono-300 transition-colors">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3 text-xs font-mono">
+        <div class="p-2 border border-mono-800 rounded bg-mono-950 space-y-2">
+          <div class="text-mono-400">nova regra: se [gatilho] então [ação]</div>
+          <div class="grid grid-cols-2 gap-2">
+            <select id="autoTrigger" class="bg-mono-900 border border-mono-800 p-1 rounded text-mono-200">
+              <option value="WHEN_COMPLETED">quando marcar concluído</option>
+              <option value="WHEN_HIGH_PRIORITY">quando prioridade for alta</option>
+            </select>
+            <select id="autoAction" class="bg-mono-900 border border-mono-800 p-1 rounded text-mono-200">
+              <option value="MOVE_KANBAN_DONE">mover kanban para concluído</option>
+              <option value="SET_HIGH_PRIORITY">definir alta prioridade</option>
+            </select>
+          </div>
+          <button onclick="addAutomationRule()" class="w-full py-1 bg-mono-800 text-mono-200 rounded hover:bg-mono-700">criar regra</button>
+        </div>
+
+        <div id="automationRulesList" class="space-y-1 max-h-40 overflow-y-auto">
+          <!-- Active rules populated dynamically -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 4: TEMPLATES MANAGER -->
+  <div id="templatesModal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 p-4">
+    <div class="bg-mono-900 border border-mono-800 rounded-lg w-full max-w-md p-5 shadow-2xl space-y-4 font-mono text-xs">
+      <div class="flex justify-between items-center border-b border-mono-800 pb-2">
+        <span class="text-mono-300">modelos de checklist rápidos</span>
+        <button onclick="closeModal('templatesModal')" class="text-mono-500 hover:text-mono-300">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="space-y-2">
+        <button onclick="applyTemplate('daily')" class="w-full text-left p-2 border border-mono-800 rounded hover:bg-mono-800 transition-colors">
+          <div class="font-bold text-mono-200">rotina diária de foco</div>
+          <div class="text-[10px] text-mono-500">inclui revisão de metas, 3 prioridades e ritual noturno</div>
+        </button>
+
+        <button onclick="applyTemplate('sprint')" class="w-full text-left p-2 border border-mono-800 rounded hover:bg-mono-800 transition-colors">
+          <div class="font-bold text-mono-200">sprint semanal de projeto</div>
+          <div class="text-[10px] text-mono-500">planejamento, backlog, testes e entrega</div>
+        </button>
+
+        <button onclick="applyTemplate('shopping')" class="w-full text-left p-2 border border-mono-800 rounded hover:bg-mono-800 transition-colors">
+          <div class="font-bold text-mono-200">lista de compras & suprimentos</div>
+          <div class="text-[10px] text-mono-500">organizada por categorias e verificação</div>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 5: VERSION SNAPSHOTS -->
+  <div id="snapshotsModal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 p-4">
+    <div class="bg-mono-900 border border-mono-800 rounded-lg w-full max-w-md p-5 shadow-2xl space-y-4 font-mono text-xs">
+      <div class="flex justify-between items-center border-b border-mono-800 pb-2">
+        <span class="text-mono-300">versões & snapshots locais</span>
+        <button onclick="closeModal('snapshotsModal')" class="text-mono-500 hover:text-mono-300">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <button onclick="createSnapshot()" class="w-full py-1.5 bg-mono-800 text-mono-200 rounded hover:bg-mono-700">criar novo snapshot agora</button>
+
+      <div id="snapshotsList" class="space-y-1 max-h-48 overflow-y-auto pt-2">
+        <!-- Snapshots list -->
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 6: HELP & KEYBOARD SHORTCUTS -->
+  <div id="helpModal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 p-4">
+    <div class="bg-mono-900 border border-mono-800 rounded-lg w-full max-w-md p-5 shadow-2xl space-y-4 font-mono text-xs">
+      <div class="flex justify-between items-center border-b border-mono-800 pb-2">
+        <span class="text-mono-300">atalhos de teclado & ajuda</span>
+        <button onclick="closeModal('helpModal')" class="text-mono-500 hover:text-mono-300">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="space-y-2 text-mono-400">
+        <div class="flex justify-between"><span class="text-mono-200">enter</span> <span>novo bloco na linha seguinte</span></div>
+        <div class="flex justify-between"><span class="text-mono-200">tab / shift+tab</span> <span>indentar / recuar sub-tarefa</span></div>
+        <div class="flex justify-between"><span class="text-mono-200">/</span> <span>abrir menu de comandos rápidos</span></div>
+        <div class="flex justify-between"><span class="text-mono-200">backspace (vazio)</span> <span>apagar bloco e focar anterior</span></div>
+        <div class="flex justify-between"><span class="text-mono-200">ctrl + z / ctrl + y</span> <span>desfazer / refazer alteração</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 7: DATA BACKUP / IMPORT EXPORT -->
+  <div id="dataModal" class="fixed inset-0 bg-black/80 hidden items-center justify-center z-50 p-4">
+    <div class="bg-mono-900 border border-mono-800 rounded-lg w-full max-w-lg p-5 shadow-2xl space-y-4">
+      <div class="flex justify-between items-center border-b border-mono-800 pb-2">
+        <span class="text-xs font-mono text-mono-300">backup & exportação de dados</span>
+        <button onclick="closeModal('dataModal')" class="text-mono-500 hover:text-mono-300 transition-colors">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="space-y-2">
+        <textarea id="jsonArea" rows="8" placeholder="cole backup json aqui..." class="w-full bg-mono-950 border border-mono-800 p-2 text-mono-300 font-mono text-xs rounded outline-none"></textarea>
+      </div>
+
+      <div class="flex flex-wrap gap-2 justify-between pt-2 border-t border-mono-800 text-xs">
+        <div class="flex space-x-2">
+          <button onclick="copyDataJSON()" class="px-2.5 py-1 bg-mono-800 text-mono-200 rounded hover:bg-mono-700 transition-colors">copiar json</button>
+          <button onclick="exportMarkdown()" class="px-2.5 py-1 bg-mono-800 text-mono-200 rounded hover:bg-mono-700 transition-colors">gerar markdown</button>
+          <button onclick="exportCSV()" class="px-2.5 py-1 bg-mono-800 text-mono-200 rounded hover:bg-mono-700 transition-colors">gerar csv</button>
+        </div>
+        <button onclick="importDataJSON()" class="px-3 py-1 bg-mono-200 text-mono-950 font-semibold rounded hover:bg-mono-100 transition-colors">importar json</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div id="toastContainer" class="fixed bottom-4 right-4 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+  <script>
+    /* Global Application State Definition */
+    const STORAGE_KEY = 'note_ls_db_v3';
+
+    let state = {
+      projects: [
+        { id: 'proj-1', title: 'minhas tarefas', icon: '📝' }
+      ],
+      currentProjectId: 'proj-1',
+      currentView: 'list', // 'list', 'board', 'eisenhower', 'gantt', 'calendar', 'analytics'
+      searchQuery: '',
+      filterPriority: 'ALL',
+      activeModalBlockId: null,
+      activeSlashBlockId: null,
+      tags: [
+        { id: 'tag-1', name: 'trabalho' },
+        { id: 'tag-2', name: 'pessoal' },
+        { id: 'tag-3', name: 'urgente' }
+      ],
+      automations: [
+        { id: 'auto-1', trigger: 'WHEN_COMPLETED', action: 'MOVE_KANBAN_DONE' }
+      ],
+      snapshots: [],
+      blocks: [
+        { id: 'b-1', projectId: 'proj-1', type: 'h1', content: 'bem-vindo ao nōte.ls', completed: false, priority: 'HIGH', status: 'TODO', eisenhower: 'URGENT_IMPORTANT', indent: 0, dueDate: '', estimateHours: 1, tagId: 'tag-1' },
+        { id: 'b-2', projectId: 'proj-1', type: 'callout', content: 'clique e edite diretamente qualquer linha. pressione enter para nova linha, tab para sub-tarefa e / para comandos rapidos.', completed: false, priority: 'LOW', status: 'TODO', eisenhower: 'NOT_URGENT_IMPORTANT', indent: 0, dueDate: '', estimateHours: 0.5, tagId: '' },
+        { id: 'b-3', projectId: 'proj-1', type: 'todo', content: 'experimente formatar texto selecionando qualquer trecho', completed: false, priority: 'MEDIUM', status: 'IN_PROGRESS', eisenhower: 'NOT_URGENT_IMPORTANT', indent: 0, dueDate: '2026-10-20', estimateHours: 2, tagId: 'tag-1' },
+        { id: 'b-4', projectId: 'proj-1', type: 'todo', content: 'sub-tarefa de exemplo aninhada na lista', completed: true, priority: 'LOW', status: 'DONE', eisenhower: 'NOT_URGENT_NOT_IMPORTANT', indent: 1, dueDate: '', estimateHours: 0.5, tagId: 'tag-2' },
+        { id: 'b-5', projectId: 'proj-1', type: 'quote', content: 'a simplicidade é o último grau de sofisticação.', completed: false, priority: 'LOW', status: 'TODO', eisenhower: 'NOT_URGENT_NOT_IMPORTANT', indent: 0, dueDate: '', estimateHours: 0, tagId: '' },
+        { id: 'b-6', projectId: 'proj-1', type: 'divider', content: '', completed: false, priority: 'LOW', status: 'TODO', eisenhower: 'NOT_URGENT_NOT_IMPORTANT', indent: 0, dueDate: '', estimateHours: 0, tagId: '' }
+      ]
+    };
+
+    /* History Undo / Redo Memory Stacks */
+    let undoStack = [];
+    let redoStack = [];
+    const MAX_HISTORY = 50;
+
+    function pushHistory() {
+      if (undoStack.length >= MAX_HISTORY) undoStack.shift();
+      undoStack.push(JSON.stringify(state));
+      redoStack = [];
+    }
+
+    function undo() {
+      if (undoStack.length === 0) return;
+      redoStack.push(JSON.stringify(state));
+      const previousState = undoStack.pop();
+      state = JSON.parse(previousState);
+      renderApp();
+      showToast("alteração desfeita");
+    }
+
+    function redo() {
+      if (redoStack.length === 0) return;
+      undoStack.push(JSON.stringify(state));
+      const nextState = redoStack.pop();
+      state = JSON.parse(nextState);
+      renderApp();
+      showToast("alteração refeita");
+    }
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function loadState() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        try {
+          state = JSON.parse(saved);
+        } catch(e) {
+          console.error("falha ao carregar estado local", e);
+        }
+      }
+    }
+
+    let audioCtx = null;
+    let noiseNode = null;
+
+    function initAudioContext() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+    }
+
+    function changeAmbientAudio(type) {
+      initAudioContext();
+      if (noiseNode) {
+        noiseNode.disconnect();
+        noiseNode = null;
+      }
+
+      if (type === 'none') return;
+
+      const bufferSize = audioCtx.sampleRate * 2;
+      const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const data = buffer.getChannelData(0);
+
+      if (type === 'white') {
+        for (let i = 0; i < bufferSize; i++) {
+          data[i] = Math.random() * 2 - 1;
+        }
+      } else if (type === 'rain') {
+        let lastOut = 0.0;
+        for (let i = 0; i < bufferSize; i++) {
+          let white = Math.random() * 2 - 1;
+          data[i] = (lastOut + (0.02 * white)) / 1.02;
+          lastOut = data[i];
+          data[i] *= 3.5;
+        }
+      } else if (type === 'binaural') {
+        for (let i = 0; i < bufferSize; i++) {
+          data[i] = Math.sin(2 * Math.PI * 220 * (i / audioCtx.sampleRate)) * 0.1;
+        }
+      }
+
+      noiseNode = audioCtx.createBufferSource();
+      noiseNode.buffer = buffer;
+      noiseNode.loop = true;
+      noiseNode.connect(audioCtx.destination);
+      noiseNode.start();
+    }
+
+    let pomodoroInterval = null;
+    let pomodoroSeconds = 25 * 60;
+    let isPomodoroRunning = false;
+
+    function togglePomodoroTimer() {
+      const btn = document.getElementById('pomoPlayBtn');
+      if (isPomodoroRunning) {
+        clearInterval(pomodoroInterval);
+        isPomodoroRunning = false;
+        btn.innerHTML = `<i data-lucide="play" class="w-3 h-3"></i>`;
+      } else {
+        isPomodoroRunning = true;
+        btn.innerHTML = `<i data-lucide="pause" class="w-3 h-3"></i>`;
+        pomodoroInterval = setInterval(() => {
+          if (pomodoroSeconds > 0) {
+            pomodoroSeconds--;
+            updatePomodoroDisplay();
+          } else {
+            clearInterval(pomodoroInterval);
+            isPomodoroRunning = false;
+            showToast("tempo de foco encerrado!");
+            btn.innerHTML = `<i data-lucide="play" class="w-3 h-3"></i>`;
+          }
+        }, 1000);
+      }
+      lucide.createIcons();
+    }
+
+    function resetPomodoroTimer() {
+      clearInterval(pomodoroInterval);
+      isPomodoroRunning = false;
+      pomodoroSeconds = 25 * 60;
+      updatePomodoroDisplay();
+      document.getElementById('pomoPlayBtn').innerHTML = `<i data-lucide="play" class="w-3 h-3"></i>`;
+      lucide.createIcons();
+    }
+
+    function updatePomodoroDisplay() {
+      const m = Math.floor(pomodoroSeconds / 60).toString().padStart(2, '0');
+      const s = (pomodoroSeconds % 60).toString().padStart(2, '0');
+      document.getElementById('pomodoroTimerDisplay').innerText = `${m}:${s}`;
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      loadState();
+      renderApp();
+      setupGlobalListeners();
+      setupFloatingToolbar();
+    });
+
+    function renderApp() {
+      lucide.createIcons();
+      renderSidebar();
+      renderHeader();
+      populateTagFilters();
+
+      if (state.currentView === 'list') {
+        renderListView();
+      } else if (state.currentView === 'board') {
+        renderBoardView();
+      } else if (state.currentView === 'eisenhower') {
+        renderEisenhowerView();
+      } else if (state.currentView === 'gantt') {
+        renderGanttView();
+      } else if (state.currentView === 'calendar') {
+        renderCalendarView();
+      } else if (state.currentView === 'analytics') {
+        renderAnalyticsView();
+      }
+
+      updateProgressBar();
+      runAutomations();
+      saveState();
+    }
+
+    function renderSidebar() {
+      const listContainer = document.getElementById('projectList');
+      listContainer.innerHTML = '';
+
+      state.projects.forEach(proj => {
+        const isActive = proj.id === state.currentProjectId;
+        const btn = document.createElement('button');
+        btn.className = `w-full flex items-center justify-between px-2 py-1.5 rounded text-xs transition-colors group ${isActive ? 'bg-mono-800 text-mono-100 font-medium' : 'text-mono-400 hover:bg-mono-800/50 hover:text-mono-200'}`;
+        btn.onclick = () => selectProject(proj.id);
+
+        btn.innerHTML = `
+          <div class="flex items-center space-x-2 truncate">
+            <span class="text-xs">${proj.icon || '📄'}</span>
+            <span class="truncate">${proj.title}</span>
+          </div>
+          ${state.projects.length > 1 ? `<i data-lucide="trash-2" onclick="event.stopPropagation(); deleteProject('${proj.id}')" class="w-3 h-3 text-mono-600 hover:text-mono-200 opacity-0 group-hover:opacity-100 transition-opacity"></i>` : ''}
+        `;
+        listContainer.appendChild(btn);
+      });
+      lucide.createIcons();
+    }
+
+    function renderHeader() {
+      const currentProj = state.projects.find(p => p.id === state.currentProjectId);
+      if (currentProj) {
+        document.getElementById('currentWorkspaceBreadcrumb').innerText = currentProj.title;
+        document.getElementById('pageTitleInput').value = currentProj.title;
+        document.getElementById('pageIcon').innerText = currentProj.icon || '📝';
+      }
+    }
+
+    function populateTagFilters() {
+      const modalSelect = document.getElementById('modalTag');
+      modalSelect.innerHTML = '<option value="">nenhuma</option>';
+
+      state.tags.forEach(tag => {
+        modalSelect.innerHTML += `<option value="${tag.id}">${tag.name}</option>`;
+      });
+    }
+
+    function getFilteredBlocks() {
+      return state.blocks.filter(block => {
+        const matchesProj = block.projectId === state.currentProjectId;
+        const matchesSearch = block.content.toLowerCase().includes(state.searchQuery.toLowerCase());
+        const matchesPriority = state.filterPriority === 'ALL' || block.priority === state.filterPriority;
+        return matchesProj && matchesSearch && matchesPriority;
+      });
+    }
+
+    function renderListView() {
+      const container = document.getElementById('listView');
+      container.innerHTML = '';
+      const blocks = getFilteredBlocks();
+
+      if (blocks.length === 0) {
+        container.innerHTML = `<div class="text-center py-12 text-mono-600 font-mono text-xs">nenhum bloco encontrado. pressione enter ou adicione uma tarefa.</div>`;
+        return;
+      }
+
+      blocks.forEach((block) => {
+        const blockEl = document.createElement('div');
+        blockEl.className = `group flex items-start space-x-1.5 py-1 px-1.5 rounded hover:bg-mono-900/60 transition-colors relative`;
+        blockEl.style.marginLeft = `${block.indent * 22}px`;
+        blockEl.draggable = true;
+
+        blockEl.ondragstart = (e) => {
+          e.dataTransfer.setData('text/plain', block.id);
+          blockEl.classList.add('drag-ghost');
+        };
+        blockEl.ondragend = () => blockEl.classList.remove('drag-ghost');
+        blockEl.ondragover = (e) => {
+          e.preventDefault();
+          blockEl.classList.add('drag-over-item');
+        };
+        blockEl.ondragleave = () => blockEl.classList.remove('drag-over-item');
+        blockEl.ondrop = (e) => {
+          blockEl.classList.remove('drag-over-item');
+          handleBlockDrop(e, block.id);
+        };
+
+        let contentMarkup = '';
+        const tagObj = state.tags.find(t => t.id === block.tagId);
+        const tagBadge = tagObj ? `<span class="text-[9px] px-1.5 py-0.5 rounded font-mono border border-mono-800 text-mono-400">${tagObj.name}</span>` : '';
+
+        if (block.type === 'todo') {
+          contentMarkup = `
+            <input type="checkbox" ${block.completed ? 'checked' : ''} onchange="toggleBlockComplete('${block.id}')" class="mt-1 w-3.5 h-3.5 rounded bg-mono-900 border-mono-700 text-mono-300 focus:ring-0 cursor-pointer accent-mono-300 shrink-0" />
+            <div contenteditable="true" data-id="${block.id}" data-placeholder="tarefa checklist..." onblur="updateBlockContent('${block.id}', this)" oninput="handleBlockInput(event, '${block.id}')" onkeydown="handleBlockKeyDown(event, '${block.id}')" class="flex-1 bg-transparent border-none outline-none text-xs text-mono-200 min-h-[20px] ${block.completed ? 'line-through text-mono-600' : ''}">${block.content}</div>
+          `;
+        } else if (block.type === 'h1') {
+          contentMarkup = `
+            <div contenteditable="true" data-id="${block.id}" data-placeholder="título h1..." onblur="updateBlockContent('${block.id}', this)" oninput="handleBlockInput(event, '${block.id}')" onkeydown="handleBlockKeyDown(event, '${block.id}')" class="flex-1 bg-transparent border-none outline-none text-base font-bold text-mono-100 min-h-[24px]">${block.content}</div>
+          `;
+        } else if (block.type === 'h2') {
+          contentMarkup = `
+            <div contenteditable="true" data-id="${block.id}" data-placeholder="subtítulo h2..." onblur="updateBlockContent('${block.id}', this)" oninput="handleBlockInput(event, '${block.id}')" onkeydown="handleBlockKeyDown(event, '${block.id}')" class="flex-1 bg-transparent border-none outline-none text-sm font-semibold text-mono-200 min-h-[22px]">${block.content}</div>
+          `;
+        } else if (block.type === 'callout') {
+          contentMarkup = `
+            <div class="flex-1 bg-mono-900/80 p-2 rounded border border-mono-800 flex items-start space-x-2">
+              <span class="text-xs shrink-0">💡</span>
+              <div contenteditable="true" data-id="${block.id}" data-placeholder="caixa de destaque..." onblur="updateBlockContent('${block.id}', this)" oninput="handleBlockInput(event, '${block.id}')" onkeydown="handleBlockKeyDown(event, '${block.id}')" class="flex-1 bg-transparent border-none outline-none text-xs text-mono-300 min-h-[20px]">${block.content}</div>
+            </div>
+          `;
+        } else if (block.type === 'quote') {
+          contentMarkup = `
+            <div class="flex-1 pl-3 border-l-2 border-mono-600 italic">
+              <div contenteditable="true" data-id="${block.id}" data-placeholder="citação..." onblur="updateBlockContent('${block.id}', this)" oninput="handleBlockInput(event, '${block.id}')" onkeydown="handleBlockKeyDown(event, '${block.id}')" class="bg-transparent border-none outline-none text-xs text-mono-400 min-h-[20px]">${block.content}</div>
+            </div>
+          `;
+        } else if (block.type === 'divider') {
+          contentMarkup = `
+            <div class="flex-1 my-2 border-b border-mono-800 pointer-events-none"></div>
+          `;
+        }
+
+        blockEl.innerHTML = `
+          <div class="cursor-grab text-mono-700 opacity-0 group-hover:opacity-100 transition-opacity pt-0.5 shrink-0" title="arrastar"><i data-lucide="grip-vertical" class="w-3.5 h-3.5"></i></div>
+          ${contentMarkup}
+          <div class="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+            ${tagBadge}
+            ${block.dueDate ? `<span class="text-[9px] font-mono text-mono-500 px-1 border border-mono-800 rounded">${block.dueDate}</span>` : ''}
+            <button onclick="openBlockModal('${block.id}')" class="p-1 hover:bg-mono-800 rounded text-mono-500 hover:text-mono-300 transition-colors" title="propriedades"><i data-lucide="sliders" class="w-3 h-3"></i></button>
+            <button onclick="deleteBlock('${block.id}')" class="p-1 hover:bg-mono-800 rounded text-mono-500 hover:text-mono-300 transition-colors" title="excluir"><i data-lucide="x" class="w-3 h-3"></i></button>
+          </div>
+        `;
+
+        container.appendChild(blockEl);
+      });
+
+      lucide.createIcons();
+    }
+
+    function renderBoardView() {
+      const blocks = getFilteredBlocks();
+      const todoCol = document.getElementById('kanban-TODO');
+      const inProgCol = document.getElementById('kanban-IN_PROGRESS');
+      const doneCol = document.getElementById('kanban-DONE');
+
+      todoCol.innerHTML = '';
+      inProgCol.innerHTML = '';
+      doneCol.innerHTML = '';
+
+      let countMap = { TODO: 0, IN_PROGRESS: 0, DONE: 0 };
+
+      blocks.forEach(block => {
+        if (block.type === 'divider') return;
+
+        const card = document.createElement('div');
+        card.className = "bg-mono-900 p-2.5 rounded border border-mono-800 shadow-sm cursor-pointer hover:border-mono-700 transition-all space-y-1.5";
+        card.draggable = true;
+        card.ondragstart = (e) => e.dataTransfer.setData('text/plain', block.id);
+        card.onclick = () => openBlockModal(block.id);
+
+        const tagObj = state.tags.find(t => t.id === block.tagId);
+
+        card.innerHTML = `
+          <div class="text-xs text-mono-200 font-sans">${block.content || 'bloco sem título'}</div>
+          <div class="flex items-center justify-between text-[10px] text-mono-500 pt-1 border-t border-mono-800/50 font-mono">
+            <span>prioridade: ${block.priority.toLowerCase()}</span>
+            ${tagObj ? `<span class="px-1 py-0.2 rounded border border-mono-800 text-mono-400">${tagObj.name}</span>` : ''}
+          </div>
+        `;
+
+        const targetStatus = block.status || (block.completed ? 'DONE' : 'TODO');
+        if (targetStatus === 'DONE') {
+          doneCol.appendChild(card);
+          countMap.DONE++;
+        } else if (targetStatus === 'IN_PROGRESS') {
+          inProgCol.appendChild(card);
+          countMap.IN_PROGRESS++;
+        } else {
+          todoCol.appendChild(card);
+          countMap.TODO++;
+        }
+      });
+
+      document.getElementById('count-TODO').innerText = countMap.TODO;
+      document.getElementById('count-IN_PROGRESS').innerText = countMap.IN_PROGRESS;
+      document.getElementById('count-DONE').innerText = countMap.DONE;
+    }
+
+    function renderEisenhowerView() {
+      const blocks = getFilteredBlocks();
+      const categories = ['URGENT_IMPORTANT', 'NOT_URGENT_IMPORTANT', 'URGENT_NOT_IMPORTANT', 'NOT_URGENT_NOT_IMPORTANT'];
+
+      categories.forEach(cat => {
+        const container = document.getElementById(`eisenhower-${cat}`);
+        container.innerHTML = '';
+
+        const matchedBlocks = blocks.filter(b => (b.eisenhower || 'NOT_URGENT_IMPORTANT') === cat);
+        matchedBlocks.forEach(block => {
+          const card = document.createElement('div');
+          card.className = "p-2 bg-mono-900 border border-mono-800 rounded text-xs text-mono-200 flex justify-between items-center cursor-pointer hover:border-mono-700";
+          card.draggable = true;
+          card.ondragstart = (e) => e.dataTransfer.setData('text/plain', block.id);
+          card.onclick = () => openBlockModal(block.id);
+
+          card.innerHTML = `
+            <span class="truncate">${block.content || 'sem título'}</span>
+            <span class="text-[9px] text-mono-500 font-mono">${block.priority.toLowerCase()}</span>
+          `;
+          container.appendChild(card);
+        });
+      });
+    }
+
+    function renderGanttView() {
+      const container = document.getElementById('ganttContainer');
+      container.innerHTML = '';
+
+      const datedBlocks = state.blocks.filter(b => b.projectId === state.currentProjectId && b.dueDate);
+
+      if (datedBlocks.length === 0) {
+        container.innerHTML = `<div class="text-mono-600 text-center py-6">nenhuma tarefa com data para a linha do tempo.</div>`;
+        return;
+      }
+
+      datedBlocks.forEach(block => {
+        const row = document.createElement('div');
+        row.className = "space-y-1";
+        row.innerHTML = `
+          <div class="flex justify-between text-mono-300">
+            <span>${block.content || 'sem título'}</span>
+            <span class="text-mono-500">${block.dueDate} (${block.estimateHours || 1}h)</span>
+          </div>
+          <div class="w-full bg-mono-950 h-2 rounded overflow-hidden border border-mono-800/60">
+            <div class="bg-mono-400 h-full" style="width: ${Math.min(100, (block.estimateHours || 1) * 20)}%"></div>
+          </div>
+        `;
+        container.appendChild(row);
+      });
+    }
+
+    function renderCalendarView() {
+      const grid = document.getElementById('calendarGrid');
+      grid.innerHTML = '';
+
+      const datedBlocks = state.blocks.filter(b => b.projectId === state.currentProjectId && b.dueDate);
+
+      if (datedBlocks.length === 0) {
+        grid.innerHTML = `<div class="col-span-full text-center py-12 text-mono-600 font-mono text-xs">nenhuma tarefa com data de entrega definida. adicione datas nas propriedades dos blocos.</div>`;
+        return;
+      }
+
+      datedBlocks.sort((a,b) => a.dueDate.localeCompare(b.dueDate));
+
+      datedBlocks.forEach(block => {
+        const card = document.createElement('div');
+        card.className = "bg-mono-900 p-3 rounded border border-mono-800 space-y-2 hover:border-mono-700 transition-colors cursor-pointer";
+        card.onclick = () => openBlockModal(block.id);
+
+        card.innerHTML = `
+          <div class="flex items-center justify-between text-[10px] font-mono text-mono-500 border-b border-mono-800 pb-1">
+            <span>vencimento: ${block.dueDate}</span>
+            <span class="px-1.5 py-0.5 rounded bg-mono-800 text-mono-300">${block.status.toLowerCase()}</span>
+          </div>
+          <div class="text-xs text-mono-200 font-sans">${block.content || 'sem descrição'}</div>
+        `;
+
+        grid.appendChild(card);
+      });
+    }
+
+    function renderAnalyticsView() {
+      const projBlocks = state.blocks.filter(b => b.projectId === state.currentProjectId && b.type === 'todo');
+      const completed = projBlocks.filter(b => b.completed).length;
+      const rate = projBlocks.length > 0 ? Math.round((completed / projBlocks.length) * 100) : 0;
+      
+      const totalHours = projBlocks.reduce((acc, b) => acc + (parseFloat(b.estimateHours) || 0), 0);
+
+      document.getElementById('statCompletionRate').innerText = `${rate}%`;
+      document.getElementById('statTotalEstimated').innerText = `${totalHours} hrs`;
+      document.getElementById('statActiveRules').innerText = state.automations.length;
+
+      drawAnalyticsCanvas();
+    }
+
+    function drawAnalyticsCanvas() {
+      const canvas = document.getElementById('analyticsCanvas');
+      if (!canvas) return;
+
+      const ctx = canvas.getContext('2d');
+      canvas.width = canvas.parentElement.clientWidth;
+      canvas.height = canvas.parentElement.clientHeight;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const projBlocks = state.blocks.filter(b => b.projectId === state.currentProjectId);
+      const high = projBlocks.filter(b => b.priority === 'HIGH').length;
+      const med = projBlocks.filter(b => b.priority === 'MEDIUM').length;
+      const low = projBlocks.filter(b => b.priority === 'LOW').length;
+
+      const total = high + med + low || 1;
+
+      const barWidth = 40;
+      const gap = 30;
+      const startX = 50;
+
+      const items = [
+        { label: 'alta', count: high, color: '#666666' },
+        { label: 'média', count: med, color: '#444444' },
+        { label: 'baixa', count: low, color: '#282828' }
+      ];
+
+      items.forEach((item, idx) => {
+        const x = startX + idx * (barWidth + gap);
+        const barHeight = (item.count / total) * (canvas.height - 50);
+
+        ctx.fillStyle = item.color;
+        ctx.fillRect(x, canvas.height - barHeight - 20, barWidth, barHeight);
+
+        ctx.fillStyle = '#888888';
+        ctx.font = '10px ui-monospace';
+        ctx.fillText(item.label, x, canvas.height - 5);
+        ctx.fillText(item.count.toString(), x + 15, canvas.height - barHeight - 25);
+      });
+    }
+
+    function handleBlockKeyDown(e, blockId) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        closeSlashMenu();
+        addBlockAfter(blockId);
+      } else if (e.key === 'Tab') {
+        e.preventDefault();
+        indentBlock(blockId, e.shiftKey ? -1 : 1);
+      } else if (e.key === 'Backspace') {
+        const text = e.target.innerText;
+        if (text === '') {
+          e.preventDefault();
+          closeSlashMenu();
+          deleteBlockAndFocusPrevious(blockId);
+        }
+      } else if (e.key === 'Escape') {
+        closeSlashMenu();
+      }
+    }
+
+    function handleBlockInput(e, blockId) {
+      const text = e.target.innerText;
+      if (text.endsWith('/')) {
+        state.activeSlashBlockId = blockId;
+        showSlashMenu(e.target);
+      } else {
+        closeSlashMenu();
+      }
+    }
+
+    function showSlashMenu(targetEl) {
+      const rect = targetEl.getBoundingClientRect();
+      const menu = document.getElementById('slashMenu');
+      menu.style.top = `${rect.bottom + 4}px`;
+      menu.style.left = `${rect.left}px`;
+      menu.classList.remove('hidden');
+    }
+
+    function closeSlashMenu() {
+      document.getElementById('slashMenu').classList.add('hidden');
+      state.activeSlashBlockId = null;
+    }
+
+    function executeSlashCommand(type) {
+      if (!state.activeSlashBlockId) return;
+      pushHistory();
+      const block = state.blocks.find(b => b.id === state.activeSlashBlockId);
+      if (block) {
+        block.type = type;
+        if (block.content.endsWith('/')) {
+          block.content = block.content.slice(0, -1);
+        }
+        renderApp();
+      }
+      closeSlashMenu();
+    }
+
+    function updateBlockContent(id, el) {
+      const block = state.blocks.find(b => b.id === id);
+      if (block) {
+        block.content = el.innerHTML;
+        saveState();
+      }
+    }
+
+    function addBlockAfter(targetId) {
+      pushHistory();
+      const index = state.blocks.findIndex(b => b.id === targetId);
+      const currentBlock = state.blocks[index];
+      
+      const newBlock = {
+        id: 'b-' + Date.now(),
+        projectId: state.currentProjectId,
+        type: 'todo',
+        content: '',
+        completed: false,
+        priority: 'MEDIUM',
+        status: 'TODO',
+        eisenhower: 'NOT_URGENT_IMPORTANT',
+        indent: currentBlock ? currentBlock.indent : 0,
+        dueDate: '',
+        estimateHours: 1,
+        tagId: ''
+      };
+
+      state.blocks.splice(index + 1, 0, newBlock);
+      renderApp();
+
+      setTimeout(() => {
+        const editables = document.querySelectorAll('#listView [contenteditable="true"]');
+        if (editables[index + 1]) editables[index + 1].focus();
+      }, 30);
+    }
+
+    function deleteBlockAndFocusPrevious(blockId) {
+      pushHistory();
+      const index = state.blocks.findIndex(b => b.id === blockId);
+      if (index > -1) {
+        state.blocks.splice(index, 1);
+        renderApp();
+
+        setTimeout(() => {
+          const editables = document.querySelectorAll('#listView [contenteditable="true"]');
+          const targetIndex = Math.max(0, index - 1);
+          if (editables[targetIndex]) {
+            editables[targetIndex].focus();
+            const range = document.createRange();
+            const sel = window.getSelection();
+            range.selectNodeContents(editables[targetIndex]);
+            range.collapse(false);
+            sel.removeAllRanges();
+            sel.addRange(range);
+          }
+        }, 30);
+      }
+    }
+
+    function indentBlock(id, direction) {
+      pushHistory();
+      const block = state.blocks.find(b => b.id === id);
+      if (block) {
+        block.indent = Math.max(0, Math.min(4, block.indent + direction));
+        renderApp();
+      }
+    }
+
+    function toggleBlockComplete(id) {
+      pushHistory();
+      const block = state.blocks.find(b => b.id === id);
+      if (block) {
+        block.completed = !block.completed;
+        block.status = block.completed ? 'DONE' : 'TODO';
+        renderApp();
+      }
+    }
+
+    function deleteBlock(id) {
+      pushHistory();
+      state.blocks = state.blocks.filter(b => b.id !== id);
+      renderApp();
+    }
+
+    function clearCompletedBlocks() {
+      pushHistory();
+      state.blocks = state.blocks.filter(b => !(b.projectId === state.currentProjectId && b.completed));
+      renderApp();
+      showToast("tarefas concluídas removidas");
+    }
+
+    function setupFloatingToolbar() {
+      document.addEventListener('selectionchange', () => {
+        const selection = window.getSelection();
+        const toolbar = document.getElementById('floatingFormatMenu');
+
+        if (selection.toString().trim().length > 0) {
+          const range = selection.getRangeAt(0);
+          const rect = range.getBoundingClientRect();
+
+          toolbar.style.top = `${rect.top - 42}px`;
+          toolbar.style.left = `${rect.left}px`;
+          toolbar.classList.remove('hidden');
+        } else {
+          toolbar.classList.add('hidden');
+        }
+      });
+    }
+
+    function formatSelection(command) {
+      document.execCommand(command, false, null);
+    }
+
+    function applyHighlight(colorClass) {
+      const selection = window.getSelection();
+      if (!selection.rangeCount) return;
+
+      const range = selection.getRangeAt(0);
+      const span = document.createElement('span');
+      span.className = colorClass;
+      span.appendChild(range.extractContents());
+      range.insertNode(span);
+    }
+
+    function wrapInlineCode() {
+      const selection = window.getSelection();
+      if (!selection.rangeCount) return;
+
+      const range = selection.getRangeAt(0);
+      const code = document.createElement('code');
+      code.className = 'inline-code';
+      code.appendChild(range.extractContents());
+      range.insertNode(code);
+    }
+
+    function switchView(view) {
+      state.currentView = view;
+      ['list', 'board', 'eisenhower', 'gantt', 'calendar', 'analytics'].forEach(v => {
+        const navBtn = document.getElementById(`nav-${v}`);
+        if (navBtn) {
+          navBtn.className = `w-full flex items-center space-x-2 px-2 py-1.5 rounded text-xs transition-colors ${v === view ? 'bg-mono-800 text-mono-200' : 'text-mono-400 hover:bg-mono-800'}`;
+        }
+        const viewEl = document.getElementById(`${v}View`);
+        if (viewEl) {
+          viewEl.classList.toggle('hidden', v !== view);
+        }
+      });
+      renderApp();
+    }
+
+    function selectProject(id) {
+      state.currentProjectId = id;
+      renderApp();
+    }
+
+    function createNewProject() {
+      pushHistory();
+      const title = prompt("nome da nova página:", "nova página");
+      if (title) {
+        const newProj = { id: 'proj-' + Date.now(), title: title.toLowerCase(), icon: '📋' };
+        state.projects.push(newProj);
+        state.currentProjectId = newProj.id;
+        renderApp();
+        showToast("página criada");
+      }
+    }
+
+    function deleteProject(id) {
+      pushHistory();
+      state.projects = state.projects.filter(p => p.id !== id);
+      state.blocks = state.blocks.filter(b => b.projectId !== id);
+      state.currentProjectId = state.projects[0]?.id || '';
+      renderApp();
+      showToast("página removida");
+    }
+
+    function updateProjectTitle(title) {
+      const proj = state.projects.find(p => p.id === state.currentProjectId);
+      if (proj) {
+        proj.title = title.toLowerCase();
+        renderApp();
+      }
+    }
+
+    function cyclePageIcon() {
+      const icons = ['📝', '⚡', '🎯', '🚀', '📚', '📌', '☕', '📂'];
+      const current = document.getElementById('pageIcon').innerText;
+      const next = icons[(icons.indexOf(current) + 1) % icons.length];
+      const proj = state.projects.find(p => p.id === state.currentProjectId);
+      if (proj) {
+        proj.icon = next;
+        renderApp();
+      }
+    }
+
+    function updateProgressBar() {
+      const projBlocks = state.blocks.filter(b => b.projectId === state.currentProjectId && b.type === 'todo');
+      if (projBlocks.length === 0) {
+        document.getElementById('workspaceProgressBar').style.width = '0%';
+        document.getElementById('progressBarPercent').innerText = '0%';
+        document.getElementById('statsSummary').innerText = '0/0 concluídos';
+        return;
+      }
+      const completed = projBlocks.filter(b => b.completed).length;
+      const pct = Math.round((completed / projBlocks.length) * 100);
+      document.getElementById('workspaceProgressBar').style.width = `${pct}%`;
+      document.getElementById('progressBarPercent').innerText = `${pct}%`;
+      document.getElementById('statsSummary').innerText = `${completed}/${projBlocks.length} concluídos`;
+    }
+
+    function runAutomations() {
+      state.automations.forEach(rule => {
+        if (rule.trigger === 'WHEN_COMPLETED') {
+          state.blocks.forEach(b => {
+            if (b.completed && rule.action === 'MOVE_KANBAN_DONE') {
+              b.status = 'DONE';
+            }
+          });
+        }
+      });
+    }
+
+    function openAutomationModal() {
+      renderAutomationRules();
+      document.getElementById('automationModal').classList.remove('hidden');
+      document.getElementById('automationModal').classList.add('flex');
+    }
+
+    function renderAutomationRules() {
+      const container = document.getElementById('automationRulesList');
+      container.innerHTML = '';
+      state.automations.forEach(rule => {
+        container.innerHTML += `
+          <div class="flex items-center justify-between p-1.5 border border-mono-800 rounded">
+            <span>se ${rule.trigger.toLowerCase()} -> ${rule.action.toLowerCase()}</span>
+            <button onclick="removeAutomationRule('${rule.id}')" class="text-mono-500 hover:text-mono-200"><i data-lucide="trash" class="w-3 h-3"></i></button>
+          </div>
+        `;
+      });
+      lucide.createIcons();
+    }
+
+    function addAutomationRule() {
+      const trigger = document.getElementById('autoTrigger').value;
+      const action = document.getElementById('autoAction').value;
+      state.automations.push({ id: 'auto-' + Date.now(), trigger, action });
+      renderAutomationRules();
+      showToast("regra criada");
+    }
+
+    function removeAutomationRule(id) {
+      state.automations = state.automations.filter(a => a.id !== id);
+      renderAutomationRules();
+    }
+
+    function openTemplatesModal() {
+      document.getElementById('templatesModal').classList.remove('hidden');
+      document.getElementById('templatesModal').classList.add('flex');
+    }
+
+    function applyTemplate(type) {
+      pushHistory();
+      const pid = state.currentProjectId;
+
+      if (type === 'daily') {
+        state.blocks.push(
+          { id: 'b-' + Date.now() + '1', projectId: pid, type: 'h1', content: 'rotina diária de foco', completed: false, priority: 'HIGH', status: 'TODO', eisenhower: 'URGENT_IMPORTANT', indent: 0, dueDate: '', estimateHours: 0.5, tagId: '' },
+          { id: 'b-' + Date.now() + '2', projectId: pid, type: 'todo', content: 'revisar 3 principais prioridades do dia', completed: false, priority: 'HIGH', status: 'TODO', eisenhower: 'URGENT_IMPORTANT', indent: 1, dueDate: '', estimateHours: 0.5, tagId: '' },
+          { id: 'b-' + Date.now() + '3', projectId: pid, type: 'todo', content: 'bloco de foco profundo pomodoro (2 horas)', completed: false, priority: 'MEDIUM', status: 'TODO', eisenhower: 'NOT_URGENT_IMPORTANT', indent: 1, dueDate: '', estimateHours: 2, tagId: '' }
+        );
+      } else if (type === 'sprint') {
+        state.blocks.push(
+          { id: 'b-' + Date.now() + '1', projectId: pid, type: 'h1', content: 'sprint semanal', completed: false, priority: 'HIGH', status: 'TODO', eisenhower: 'URGENT_IMPORTANT', indent: 0, dueDate: '', estimateHours: 1, tagId: '' },
+          { id: 'b-' + Date.now() + '2', projectId: pid, type: 'todo', content: 'planejamento e estimativa de esforço', completed: false, priority: 'MEDIUM', status: 'TODO', eisenhower: 'NOT_URGENT_IMPORTANT', indent: 1, dueDate: '', estimateHours: 1, tagId: '' },
+          { id: 'b-' + Date.now() + '3', projectId: pid, type: 'todo', content: 'execução dos entregáveis e testes', completed: false, priority: 'HIGH', status: 'TODO', eisenhower: 'URGENT_IMPORTANT', indent: 1, dueDate: '', estimateHours: 4, tagId: '' }
+        );
+      } else if (type === 'shopping') {
+        state.blocks.push(
+          { id: 'b-' + Date.now() + '1', projectId: pid, type: 'h1', content: 'lista de suprimentos', completed: false, priority: 'LOW', status: 'TODO', eisenhower: 'NOT_URGENT_NOT_IMPORTANT', indent: 0, dueDate: '', estimateHours: 0.5, tagId: '' },
+          { id: 'b-' + Date.now() + '2', projectId: pid, type: 'todo', content: 'itens essenciais do escritório', completed: false, priority: 'LOW', status: 'TODO', eisenhower: 'NOT_URGENT_NOT_IMPORTANT', indent: 1, dueDate: '', estimateHours: 0.5, tagId: '' }
+        );
+      }
+
+      closeModal('templatesModal');
+      renderApp();
+      showToast("modelo aplicado com sucesso");
+    }
+
+    function openSnapshotsModal() {
+      renderSnapshots();
+      document.getElementById('snapshotsModal').classList.remove('hidden');
+      document.getElementById('snapshotsModal').classList.add('flex');
+    }
+
+    function createSnapshot() {
+      const snap = {
+        id: 'snap-' + Date.now(),
+        date: new Date().toLocaleString('pt-BR'),
+        data: JSON.stringify(state)
+      };
+      state.snapshots.push(snap);
+      renderSnapshots();
+      saveState();
+      showToast("snapshot salvo");
+    }
+
+    function renderSnapshots() {
+      const container = document.getElementById('snapshotsList');
+      container.innerHTML = '';
+      if (state.snapshots.length === 0) {
+        container.innerHTML = `<div class="text-mono-600 text-center py-4">nenhum snapshot salvo.</div>`;
+        return;
+      }
+      state.snapshots.forEach(s => {
+        container.innerHTML += `
+          <div class="flex items-center justify-between p-1.5 border border-mono-800 rounded">
+            <span>${s.date}</span>
+            <button onclick="restoreSnapshot('${s.id}')" class="text-mono-300 hover:underline">restaurar</button>
+          </div>
+        `;
+      });
+    }
+
+    function restoreSnapshot(id) {
+      const snap = state.snapshots.find(s => s.id === id);
+      if (snap) {
+        state = JSON.parse(snap.data);
+        renderApp();
+        closeModal('snapshotsModal');
+        showToast("versão restaurada com sucesso");
+      }
+    }
+
+    function openHelpModal() {
+      document.getElementById('helpModal').classList.remove('hidden');
+      document.getElementById('helpModal').classList.add('flex');
+    }
+
+    function openBlockModal(id) {
+      state.activeModalBlockId = id;
+      const block = state.blocks.find(b => b.id === id);
+      if (!block) return;
+
+      document.getElementById('modalType').value = block.type;
+      document.getElementById('modalPriority').value = block.priority;
+      document.getElementById('modalStatus').value = block.status || 'TODO';
+      document.getElementById('modalEisenhower').value = block.eisenhower || 'NOT_URGENT_IMPORTANT';
+      document.getElementById('modalDueDate').value = block.dueDate || '';
+      document.getElementById('modalEstimateHours').value = block.estimateHours || '';
+      document.getElementById('modalTag').value = block.tagId || '';
+
+      document.getElementById('blockModal').classList.remove('hidden');
+      document.getElementById('blockModal').classList.add('flex');
+    }
+
+    function saveBlockModal() {
+      if (!state.activeModalBlockId) return;
+      pushHistory();
+      const block = state.blocks.find(b => b.id === state.activeModalBlockId);
+      if (block) {
+        block.type = document.getElementById('modalType').value;
+        block.priority = document.getElementById('modalPriority').value;
+        block.status = document.getElementById('modalStatus').value;
+        block.eisenhower = document.getElementById('modalEisenhower').value;
+        block.completed = block.status === 'DONE';
+        block.dueDate = document.getElementById('modalDueDate').value;
+        block.estimateHours = parseFloat(document.getElementById('modalEstimateHours').value) || 0;
+        block.tagId = document.getElementById('modalTag').value;
+        renderApp();
+        showToast("propriedades salvas");
+      }
+      closeModal('blockModal');
+    }
+
+    function openTagsManager() {
+      renderTagsList();
+      document.getElementById('tagsModal').classList.remove('hidden');
+      document.getElementById('tagsModal').classList.add('flex');
+    }
+
+    function renderTagsList() {
+      const container = document.getElementById('tagsList');
+      container.innerHTML = '';
+      state.tags.forEach(t => {
+        container.innerHTML += `
+          <div class="flex items-center justify-between p-1.5 border border-mono-800 rounded">
+            <span class="text-mono-300 font-mono">${t.name}</span>
+            <button onclick="removeTag('${t.id}')" class="text-mono-500 hover:text-mono-200 transition-colors"><i data-lucide="trash" class="w-3.5 h-3.5"></i></button>
+          </div>
+        `;
+      });
+      lucide.createIcons();
+    }
+
+    function addTag() {
+      const name = document.getElementById('newTagName').value.trim();
+      if (name) {
+        state.tags.push({ id: 'tag-' + Date.now(), name: name.toLowerCase() });
+        document.getElementById('newTagName').value = '';
+        renderTagsList();
+        renderApp();
+      }
+    }
+
+    function removeTag(id) {
+      state.tags = state.tags.filter(t => t.id !== id);
+      renderTagsList();
+      renderApp();
+    }
+
+    function openDataModal() {
+      document.getElementById('jsonArea').value = JSON.stringify(state, null, 2);
+      document.getElementById('dataModal').classList.remove('hidden');
+      document.getElementById('dataModal').classList.add('flex');
+    }
+
+    function copyDataJSON() {
+      const text = document.getElementById('jsonArea').value;
+      document.execCommand('copy');
+      showToast("json copiado para transferência");
+    }
+
+    function importDataJSON() {
+      try {
+        const parsed = JSON.parse(document.getElementById('jsonArea').value);
+        if (parsed.blocks && parsed.projects) {
+          state = parsed;
+          renderApp();
+          closeModal('dataModal');
+          showToast("dados importados com sucesso");
+        }
+      } catch(e) {
+        alert('json inválido');
+      }
+    }
+
+    function exportMarkdown() {
+      let md = `# ${state.projects.find(p=>p.id===state.currentProjectId)?.title || 'exportação'}\n\n`;
+      state.blocks.filter(b=>b.projectId === state.currentProjectId).forEach(b => {
+        const indent = '  '.repeat(b.indent);
+        if (b.type === 'todo') md += `${indent}- [${b.completed ? 'x' : ' '}] ${b.content}\n`;
+        else if (b.type === 'h1') md += `# ${b.content}\n`;
+        else if (b.type === 'h2') md += `## ${b.content}\n`;
+        else md += `${indent}${b.content}\n`;
+      });
+      document.getElementById('jsonArea').value = md;
+      showToast("markdown gerado");
+    }
+
+    function exportCSV() {
+      let csv = "id,conteudo,concluido,prioridade,status,data_entrega,horas_estimadas\n";
+      state.blocks.filter(b=>b.projectId === state.currentProjectId).forEach(b => {
+        csv += `"${b.id}","${b.content.replace(/"/g, '""')}",${b.completed},"${b.priority}","${b.status}","${b.dueDate}",${b.estimateHours || 0}\n`;
+      });
+      document.getElementById('jsonArea').value = csv;
+      showToast("csv gerado");
+    }
+
+    function closeModal(modalId) {
+      document.getElementById(modalId).classList.add('hidden');
+      document.getElementById(modalId).classList.remove('flex');
+    }
+
+    function showToast(msg) {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = 'bg-mono-900 border border-mono-700 text-mono-200 text-xs px-3 py-1.5 rounded shadow-xl font-mono transition-opacity duration-300';
+      toast.innerText = msg.toLowerCase();
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+      }, 2000);
+    }
+
+    function setupGlobalListeners() {
+      window.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+          e.preventDefault();
+          undo();
+        } else if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+          e.preventDefault();
+          redo();
+        } else if (e.key === '?') {
+          openHelpModal();
+        }
+      });
+    }
+
+    function handleSearch(val) {
+      state.searchQuery = val;
+      renderApp();
+    }
+
+    function handleFilterChange() {
+      state.filterPriority = document.getElementById('priorityFilter').value;
+      renderApp();
+    }
+
+    function allowDrop(e) { e.preventDefault(); }
+
+    function dropKanban(e, newStatus) {
+      e.preventDefault();
+      const id = e.dataTransfer.getData('text/plain');
+      const block = state.blocks.find(b => b.id === id);
+      if (block) {
+        pushHistory();
+        block.status = newStatus;
+        block.completed = newStatus === 'DONE';
+        renderApp();
+      }
+    }
+
+    function dropEisenhower(e, newCategory) {
+      e.preventDefault();
+      const id = e.dataTransfer.getData('text/plain');
+      const block = state.blocks.find(b => b.id === id);
+      if (block) {
+        pushHistory();
+        block.eisenhower = newCategory;
+        renderApp();
+      }
+    }
+
+    function handleBlockDrop(e, targetId) {
+      e.preventDefault();
+      const draggedId = e.dataTransfer.getData('text/plain');
+      if (draggedId === targetId) return;
+
+      const draggedIdx = state.blocks.findIndex(b => b.id === draggedId);
+      const targetIdx = state.blocks.findIndex(b => b.id === targetId);
+
+      if (draggedIdx > -1 && targetIdx > -1) {
+        pushHistory();
+        const [draggedBlock] = state.blocks.splice(draggedIdx, 1);
+        state.blocks.splice(targetIdx, 0, draggedBlock);
+        renderApp();
+      }
+    }
+
+    function toggleSidebar() {
+      document.getElementById('sidebar').classList.toggle('-ml-64');
+    }
+  </script>
+</body>
+</html> 
